@@ -1,4 +1,5 @@
 import {esc, date, icon, markdown} from './render.js';
+import {licenseConsent,licenseBadge} from './licensing.js';
 import {blockText, selectionAnchor, anchorForBlock, rangeForAnchor} from './annotation-anchor.js';
 
 // The controller lives only for this rendered article. No reading drafts or
@@ -38,12 +39,12 @@ export function initAnnotations({root, post, comments = [], me, member, onSubmit
   const draft = () => drafts.get(draftKey()) || {body: '', replyTo: null};
   function saveDraft() {
     const field = drawer.querySelector('[name="annotation-body"]'), key = draftKey();
-    if (field && key) drafts.set(key, {...draft(), body: field.value});
+    if (field && key) drafts.set(key, {...draft(), body: field.value, licenseConfirmed: drawer.querySelector('[name=licenseConfirmed]')?.checked===true});
   }
   function setBusy(value) {
     busy = value;
     drawer.setAttribute('aria-busy', String(value));
-    drawer.querySelectorAll('button, textarea').forEach(control => {
+    drawer.querySelectorAll('button, textarea, input').forEach(control => {
       if (value) { control.dataset.annotationWasDisabled = control.disabled ? '1' : '0'; control.disabled = true; }
       else if ('annotationWasDisabled' in control.dataset) { control.disabled = control.dataset.annotationWasDisabled === '1'; delete control.dataset.annotationWasDisabled; }
     });
@@ -158,11 +159,11 @@ export function initAnnotations({root, post, comments = [], me, member, onSubmit
   }
   function commentHTML(c, rootId) {
     const parent = c.replyTo && c.replyTo !== rootId ? byId(c.replyTo) : null;
-    return `<article class="annotation-comment" data-annotation-comment="${esc(c.id)}"><div class="annotation-comment-meta">${avatar(c.authorId)}<a href="#/people/${encodeURIComponent(c.authorId)}">${esc(person(c.authorId).name)}</a><time datetime="${esc(c.createdAt)}">${date(c.createdAt)}</time>${editedLabel(c)}</div>${parent ? `<p class="annotation-reply-context">回复 ${esc(person(parent.authorId).name)}</p>` : ''}<div class="prose annotation-comment-body">${markdown(c.body, 'annotation-' + c.id).html}</div><div class="annotation-comment-actions"><button type="button" class="text-button" data-annotation-reply="${esc(c.id)}"${view.kind === 'edit' ? ' disabled' : ''}>回复</button>${c.authorId === me.id && onEdit ? `<button type="button" class="text-button" data-annotation-edit="${esc(c.id)}">编辑</button>` : ''}${c.authorId === me.id || me.role === 'admin' ? `<button type="button" class="text-button" data-annotation-hide="${esc(c.id)}">隐藏</button>` : ''}</div>${pendingHide === c.id ? `<div class="annotation-confirm"><span>隐藏后，其他成员将无法看到。</span><button type="button" class="text-button" data-annotation-cancel-hide>取消</button><button type="button" class="text-button" data-annotation-confirm-hide="${esc(c.id)}">确认隐藏</button></div>` : ''}</article>`;
+    return `<article class="annotation-comment" data-annotation-comment="${esc(c.id)}"><div class="annotation-comment-meta">${avatar(c.authorId)}<a href="#/people/${encodeURIComponent(c.authorId)}">${esc(person(c.authorId).name)}</a><time datetime="${esc(c.createdAt)}">${date(c.createdAt)}</time>${editedLabel(c)}${licenseBadge(c)}</div>${parent ? `<p class="annotation-reply-context">回复 ${esc(person(parent.authorId).name)}</p>` : ''}<div class="prose annotation-comment-body">${markdown(c.body, 'annotation-' + c.id).html}</div><div class="annotation-comment-actions"><button type="button" class="text-button" data-annotation-reply="${esc(c.id)}"${view.kind === 'edit' ? ' disabled' : ''}>回复</button>${c.authorId === me.id && onEdit ? `<button type="button" class="text-button" data-annotation-edit="${esc(c.id)}">编辑</button>` : ''}${c.authorId === me.id || me.role === 'admin' ? `<button type="button" class="text-button" data-annotation-hide="${esc(c.id)}">隐藏</button>` : ''}</div>${pendingHide === c.id ? `<div class="annotation-confirm"><span>隐藏后，其他成员将无法看到。</span><button type="button" class="text-button" data-annotation-cancel-hide>取消</button><button type="button" class="text-button" data-annotation-confirm-hide="${esc(c.id)}">确认隐藏</button></div>` : ''}</article>`;
   }
   function formHTML() {
     const data = draft(), editing = view.kind === 'edit', reply = !editing && data.replyTo && byId(data.replyTo);
-    return `<form class="annotation-form${editing ? ' annotation-edit-form' : ''}"><label for="annotation-body">${editing ? '修改内容' : view.kind === 'new' ? '写批注' : reply ? `回复 ${esc(person(reply.authorId).name)}` : '回复批注'}</label>${editing ? '<button class="text-button annotation-cancel-reply" type="button" data-annotation-cancel-edit>取消编辑</button>' : reply ? '<button class="text-button annotation-cancel-reply" type="button" data-annotation-cancel-reply>取消回复</button>' : ''}<textarea id="annotation-body" name="annotation-body" rows="3" maxlength="5000" required placeholder="写下你的想法…">${esc(data.body)}</textarea><div class="annotation-form-bottom"><span>受邀成员可见</span><button class="btn small" type="submit">${editing ? '保存修改' : view.kind === 'new' ? '发表批注' : '发表回复'}</button></div><p class="annotation-error" role="alert"></p></form>`;
+    return `<form class="annotation-form${editing ? ' annotation-edit-form' : ''}"><label for="annotation-body">${editing ? '修改内容' : view.kind === 'new' ? '写批注' : reply ? `回复 ${esc(person(reply.authorId).name)}` : '回复批注'}</label>${editing ? '<button class="text-button annotation-cancel-reply" type="button" data-annotation-cancel-edit>取消编辑</button>' : reply ? '<button class="text-button annotation-cancel-reply" type="button" data-annotation-cancel-reply>取消回复</button>' : ''}<textarea id="annotation-body" name="annotation-body" rows="3" maxlength="5000" required placeholder="写下你的想法…">${esc(data.body)}</textarea>${editing?'':licenseConsent({checked:data.licenseConfirmed===true})}<div class="annotation-form-bottom"><span>受邀成员可见</span><button class="btn small" type="submit">${editing ? '保存修改' : view.kind === 'new' ? '发表批注' : '发表回复'}</button></div><p class="annotation-error" role="alert"></p></form>`;
   }
   function renderDrawer({focus = false} = {}) {
     const current = ['thread', 'edit'].includes(view.kind) ? byId(view.id) : null;
@@ -296,7 +297,7 @@ export function initAnnotations({root, post, comments = [], me, member, onSubmit
     const data = draft(), key = draftKey(), editing = view.kind === 'edit';
     if (!data.body.trim()) { drawer.querySelector('.annotation-error').textContent = '请填写内容。'; return; }
     const editId = editing ? view.editId : null;
-    const payload = editing ? {id: editId, body: data.body, expectedRevision: data.expectedRevision} : {body: data.body, replyTo: view.kind === 'thread' ? data.replyTo || view.id : null, ...(view.kind === 'new' ? {anchor: view.anchor} : {})};
+    const payload = editing ? {id: editId, body: data.body, expectedRevision: data.expectedRevision} : {body: data.body, licenseConfirmed: data.licenseConfirmed===true, replyTo: view.kind === 'thread' ? data.replyTo || view.id : null, ...(view.kind === 'new' ? {anchor: view.anchor} : {})};
     const oldRoot = ['thread', 'edit'].includes(view.kind) ? view.id : null;
     const known = new Set(all.map(c => c.id));
     setBusy(true); const submit = drawer.querySelector('[type="submit"]'); submit.textContent = editing ? '正在保存…' : '正在发表…';

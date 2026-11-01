@@ -39,3 +39,11 @@ input:not([type=search]),textarea,select{width:100%;min-width:0;padding:10px 12p
 @media(max-width:1100px){.account-menu .account-menu-name{display:none}.member-profile-layout{gap:35px}}
 @media(max-width:850px){.member-profile-layout{display:block}.member-profile-aside{display:none}.member-profile-head{gap:22px}.member-identity{gap:19px}.member-identity>.avatar{width:64px;height:64px;font-size:28px}}
 @media(max-width:640px){.member-profile-head{display:block;padding:3px 0 25px}.member-identity{gap:16px}.member-identity>.avatar{width:52px;height:52px;font-size:24px}.member-intro .overline{font-size:9px;letter-spacing:1px}.member-intro h1{font-size:29px;margin:8px 0 10px}.member-intro .profile-field{font-size:12px}.member-bio{font-size:13px}.member-joined{font-size:10px;margin-top:14px}.member-profile-actions{flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px;margin-top:22px;padding:0}.member-profile-actions>.btn{font-size:11px;padding:8px 12px}.member-profile-actions>.text-button{font-size:11px;margin:0}.member-stats{gap:27px;padding:18px 0;margin-bottom:24px}.member-stats>div{gap:7px}.member-stats dd{font-size:22px}.member-stats dt{font-size:11px}.profile-tabs{justify-content:space-between;gap:8px}.profile-tabs>a{font-size:12px;gap:4px}.profile-tabs>a>span{font-size:10px}.account-menu-panel{min-width:174px}}
+
+/* Content licensing: compact consent beside the act of publishing. */
+.license-consent,.editor .license-consent,.comment-form .license-consent,.annotation-form .license-consent{display:flex;align-items:flex-start;gap:9px;margin:18px 0;color:var(--muted);font:12px/1.9 var(--sans);font-weight:400;cursor:pointer}
+.license-consent input,.editor .license-consent input,.comment-form .license-consent input,.annotation-form .license-consent input{width:16px;height:16px;min-width:16px;padding:0;margin:4px 0 0;flex:0 0 16px;accent-color:var(--ink)}
+.license-consent a,.content-license a{text-decoration:underline;text-underline-offset:3px}
+.license-badge{font:10px/1.6 var(--sans);color:var(--muted);white-space:nowrap}
+.content-license{margin:25px 0 0;padding-top:17px;border-top:1px solid var(--line);color:var(--muted);font:12px/1.9 var(--sans)}
+.annotation-form .license-consent{font-size:11px;margin:12px 0}
