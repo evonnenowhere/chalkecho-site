@@ -1,0 +1,99 @@
+/* Marginalia appear with the text; the reading column never reserves a panel. */
+::highlight(community-annotations) {
+  text-decoration: underline;
+  text-decoration-color: #8c9c72;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+::highlight(community-annotation-active) { background-color: #e4e6cc; color: #303b32; }
+.article-prose [data-annotation-block] { position: relative; }
+.annotation-control { position: absolute; top: 0; right: -30px; width: 26px; display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 0; user-select: none; font: 10px/1.4 var(--sans); }
+.annotation-control button { display: inline-flex; align-items: center; justify-content: center; gap: 2px; width: 26px; min-width: 0; min-height: 26px; padding: 2px; color: #718068; background: transparent; border-radius: 3px; vertical-align: middle; }
+.annotation-control .icon { width: 13px; height: 13px; }
+.annotation-control .annotation-count { font-size: 9px; }
+.annotation-count .icon { width: 10px; height: 10px; }
+.annotation-control button:hover { color: var(--accent); background: #e7ebdc; }
+.annotation-control .annotation-add { opacity: 0; }
+[data-annotation-block]:hover > .annotation-control .annotation-add,
+[data-annotation-block]:focus-within > .annotation-control .annotation-add,
+.annotation-mode .annotation-control .annotation-add { opacity: 1; }
+.annotation-mode [data-annotation-block] { outline: 1px dashed #bfc7b4; outline-offset: 6px; }
+.annotation-selection { position: fixed; display: inline-flex; align-items: center; gap: 6px; z-index: 60; padding: 9px 13px; border: 1px solid #294a3b; border-radius: 4px; background: var(--board); color: var(--chalk); box-shadow: 0 3px 10px #25392d24; font-size: 13px; line-height: 1.5; white-space: nowrap; }
+.annotation-selection .icon { width: 15px; height: 15px; }
+.annotation-selection:hover { background: #1d362b; }
+.annotation-drawer { position: fixed; inset: 0 0 0 auto; width: min(440px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; padding: 0; border: 0; border-left: 1px solid var(--line); border-radius: 0; background: var(--paper-texture), var(--white); color: var(--ink); box-shadow: -12px 0 50px #283b2a1a; overflow: hidden; }
+.annotation-drawer[open] { display: flex; flex-direction: column; }
+.annotation-drawer::backdrop { background: #293c3024; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.annotation-drawer-header { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; padding: 20px 20px 16px; border-bottom: 1px solid var(--line); }
+.annotation-drawer-header h2 { flex: 1; margin: 0; font: 500 20px/1.4 var(--serif); }
+.annotation-drawer-header h2 span { padding-left: 10px; color: var(--muted); font: 12px var(--sans); }
+.annotation-drawer-header .icon-button { flex-shrink: 0; }
+.annotation-drawer-content { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 24px; }
+.annotation-quote { margin: 0 0 24px; padding: 12px 15px; background: #efeedf; border-left: 2px solid #899a73; color: #59634f; font: 14px/1.9 var(--serif); white-space: pre-wrap; overflow-wrap: anywhere; }
+.annotation-unavailable { color: var(--muted); font-size: 12px; margin: -12px 0 20px; }
+.annotation-comment { padding: 0 0 20px; margin: 0 0 20px; border-bottom: 1px solid var(--line); }
+.annotation-comment-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.annotation-comment-meta a { color: #465d48; }
+.annotation-comment-meta time { margin-left: auto; font-size: 10px; color: var(--muted); }
+.annotation-comment-body { margin: 10px 0 4px; font: 14px/1.9 var(--sans); }
+.annotation-comment-body > :last-child { margin-bottom: 0; }
+.annotation-comment-body .katex-display { overflow-x: auto; overflow-y: hidden; }
+.annotation-comment-actions { display: flex; gap: 18px; margin-top: 10px; }
+.annotation-reply-context { margin: 8px 0 0; color: var(--muted); font-size: 11px; }
+.annotation-confirm { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 10px 0 0; padding: 10px; background: #f0ecdf; color: var(--muted); font-size: 11px; }
+.annotation-confirm span { flex-basis: 100%; }
+.annotation-confirm [data-annotation-confirm-hide] { color: #8d4940; }
+.annotation-form { position: relative; margin-top: 20px; }
+.annotation-form label { display: block; margin-bottom: 9px; color: #4c5d49; font-size: 13px; }
+.annotation-form textarea { display: block; width: 100%; min-height: 100px; padding: 11px 12px; resize: vertical; border: 1px solid #c7cbb8; border-radius: 2px; background: #fdfbf4; color: var(--ink); font: 14px/1.8 var(--sans); }
+.annotation-form textarea::placeholder { color: #8b8f82; }
+.annotation-form-bottom { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.annotation-form-bottom > span { color: var(--muted); font-size: 11px; }
+.annotation-cancel-reply { position: absolute; right: 0; top: -2px; }
+.annotation-error, .annotation-global-error { color: #943c36; font-size: 12px; line-height: 1.7; }
+.annotation-error { margin: 10px 0 0; }
+.annotation-error:empty, .annotation-global-error:empty { display: none; }
+.annotation-global-error { flex: 0 0 auto; margin: 0; padding: 12px 24px; border-top: 1px solid var(--line); }
+.annotation-empty { margin-bottom: 22px; font-size: 14px; color: var(--muted); }
+.annotation-choose { margin: 8px 0; }
+.annotation-thread-list { display: flex; flex-direction: column; }
+.annotation-thread-preview { width: 100%; padding: 0 0 22px; margin-bottom: 22px; text-align: left; background: transparent; border-bottom: 1px solid var(--line); color: var(--ink); }
+.annotation-thread-preview:hover .annotation-preview-body { color: var(--accent); }
+.annotation-preview-quote { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; padding: 9px 12px; margin-bottom: 13px; border-left: 2px solid #9ca78c; background: #f0efdf; font: 13px/1.8 var(--serif); color: #667158; }
+.annotation-preview-person { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; font-size: 12px; }
+.annotation-preview-person > span:last-child { margin-left: auto; color: var(--muted); font-size: 10px; }
+.annotation-preview-body { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; font-size: 13px; line-height: 1.8; }
+.annotation-preview-count { display: block; margin-top: 9px; color: var(--muted); font-size: 11px; }
+@media (hover: none) { .annotation-control .annotation-add { display: none; } .annotation-mode .annotation-control .annotation-add { display: inline-flex; } }
+@media (max-width: 640px) {
+  .annotation-drawer { inset: auto 0 0; width: 100%; height: min(84dvh, 760px); max-height: 100dvh; border-left: 0; border-top: 1px solid #bfc5b1; border-radius: 12px 12px 0 0; }
+  .annotation-drawer-header { padding: 13px 16px 10px; }
+  .annotation-drawer-content { padding: 18px 20px calc(22px + env(safe-area-inset-bottom)); }
+  .annotation-form textarea { font-size: 16px; }
+  .annotation-control { right: -18px; width: 24px; }
+  .annotation-control button { width: 24px; min-width: 0; min-height: 28px; }
+}
+
+.annotation-selection[hidden], .annotation-mode-done[hidden] { display: none !important; }
+.article-prose.annotation-fallback { position: relative; isolation: isolate; }
+.annotation-fallback [data-annotation-block] { z-index: 1; }
+.annotation-rect-layer { position: absolute; inset: 0; pointer-events: none; user-select: none; z-index: 0; }
+.annotation-rect-layer > span { position: absolute; display: block; pointer-events: none; }
+.annotation-range-line { height: 0; border-bottom: 1px dotted #8c9c72; }
+.annotation-range-active { background: #dfe3c78c; border-radius: 1px; }
+.annotation-toolbar { display: flex; align-items: center; gap: 16px; margin: 16px 0 0; }
+.annotation-toolbar .quiet-action { font-size: 12px; }
+.article-prose li > p[data-annotation-block] { margin: 0; }
+.annotation-mode-done { position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); padding: 9px 18px; background: var(--board); color: var(--chalk); border: 1px solid #5f745b; border-radius: 4px; z-index: 50; font-size: 13px; box-shadow: 0 3px 12px #263d2926; }
+.article-prose:focus { outline: none; }
+
+.annotation-excerpt { max-width: 100%; white-space: normal; overflow-x: auto; overflow-y: hidden; }
+.annotation-excerpt > :last-child { margin-bottom: 0; }
+.annotation-quote .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: 3px 0; }
+.annotation-quote code { padding: 2px 4px; background: #e7e8d8; border-radius: 2px; font-size: .9em; }
+
+.annotation-edited { color: var(--muted); font-size: 10px; white-space: nowrap; }
+.annotation-comment-actions .text-button:disabled { color: #a4a99b; cursor: default; }
+.annotation-edit-form textarea { border-color: #95a486; }
+.annotation-drawer[aria-busy="true"] textarea { opacity: .75; }

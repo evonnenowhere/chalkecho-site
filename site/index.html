@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ChalkEcho 中文数学社区：分享研究经验、阅读中文长文与论文导读，在数学与生活之间认真交流。受邀内测，登录后阅读与交流。">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="theme-color" content="#243e35">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://chalkecho-api.chalkechoing.workers.dev; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <title>ChalkEcho · 中文数学社区</title>
+  <link rel="icon" type="image/svg+xml" href="./assets/mark.svg">
+  <link rel="stylesheet" href="./vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./paper-chalk.css">
+  <link rel="stylesheet" href="./annotations.css">
+  <script defer src="./vendor/markdown-it.min.js"></script>
+  <script defer src="./vendor/markdown-it-footnote.min.js"></script>
+  <script defer src="./vendor/katex/katex.min.js"></script>
+  <script defer src="./vendor/texmath.min.js"></script>
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到正文</a>
+  <div id="app"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="dialog" aria-labelledby="dialog-title"></dialog>
+  <noscript><main class="page"><h1>ChalkEcho · 中文数学社区</h1><p>请启用 JavaScript，以阅读社区内容和参与讨论。</p></main></noscript>
+</body>
+</html>

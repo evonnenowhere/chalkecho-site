@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <filter id="chalk" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency=".38" numOctaves="3" stitchTiles="stitch" seed="5"/>
+    <feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .16 -.035"/>
+  </filter>
+  <filter id="eraser"><feGaussianBlur stdDeviation="13"/></filter>
+  <path fill="none" stroke="#e8e9d5" stroke-width="28" opacity=".035" filter="url(#eraser)" d="M-30 78C80 58 250 96 430 66M-30 203C140 177 230 225 430 190"/>
+  <path fill="#fff" filter="url(#chalk)" d="M0 0h400v300H0z"/>
+</svg>
