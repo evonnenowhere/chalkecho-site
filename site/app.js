@@ -189,7 +189,7 @@ function render(preserve=false){
   const locked=!store.state.me&&!['login','join','forgot','recover','about'].includes(route.path);
   const pages={login:loginPage,join:joinPage,forgot:forgotPage,recover:recoverPage,account:accountPage,admin:adminPage,articles:articlesPage,translations:translationsPage,feed:feedPage,topics:topicsPage,post:postPage,people:profilePage,me:profilePage,bookmarks:bookmarksPage,write:composePage,edit:composePage,about:aboutPage};
   app.innerHTML=header()+`<main id="main" class="page ${route.path==='post'?'reading-page':''}" tabindex="-1">${routeError?empty('暂时无法打开',routeError,'<button class="btn secondary" data-action="refresh">重新连接</button>'):(locked?loginPage:(pages[route.path]||notFound))()}</main>`+footer();
-  document.title=locked?'受邀内测 · ChalkEcho':route.path==='articles'?'ChalkEcho · 中文数学社区':(route.path==='post'?(store.post(route.id)?(store.post(route.id).title||'一则研究动态'):'内容未找到'):({login:'邮箱登录',join:'受邀加入',forgot:'找回密码',recover:'设置新密码',account:'我的账号',admin:'管理社区',articles:'文章',translations:'译文',feed:'同行动态',topics:'共同阅读',write:'写一点',edit:'编辑内容',bookmarks:'我的收藏',people:store.member(route.id).name,me:'我的主页',about:'关于社区'}[route.path]||'页面未找到'))+' · ChalkEcho';
+  document.title=locked?'受邀内测 · ChalkEcho':route.path==='articles'?'ChalkEcho · 中文数学社区':(route.path==='post'?(store.post(route.id)?(store.post(route.id).title||'一则研究动态'):'内容未找到'):({login:'邮箱登录',join:'受邀加入',forgot:'找回密码',recover:'设置新密码',account:'我的账号',admin:'管理社区',articles:'文章',translations:'译文',feed:'同行动态',topics:'共同阅读',write:'写一点',edit:'编辑内容',bookmarks:'我的收藏',people:route.id?store.member(route.id).name:'页面未找到',me:'我的主页',about:'关于社区'}[route.path]||'页面未找到'))+' · ChalkEcho';
   const prose=document.querySelector('.article-prose'),post=store.post(route.id);
   if(prose&&post&&post.kind!=='note'&&store.state.me)annotations=initAnnotations({
     root:prose,post,comments:store.commentsFor(post.id),me:store.state.me,member:id=>store.member(id),notify,
@@ -265,7 +265,7 @@ window.addEventListener('hashchange',async()=>{clearTimeout(saveTimer);if(editor
 document.addEventListener('keydown',e=>{const menu=document.querySelector('.account-menu');if(e.key==='Escape'&&menu?.open){menu.open=false;menu.querySelector('summary').focus();}});
 window.addEventListener('pagehide',saveDraft);
 dialog.addEventListener('cancel',event=>{if(dialog.querySelector('form[data-busy]')){event.preventDefault();return;}pendingMemberAction=null;commentEdit=null;});
-let adminData=null,latestInvite=null,latestRecovery='',routeError='',syncing=false;
+let adminData=null,latestInvite=null,latestRecovery='',routeError='',syncing=false,adminRequest=0;
 let joinState={token:'',data:null,error:'',retry:false},joinLoad=0;
 const loadMore=()=>store.hasMore?'<div class="load-more"><button class="btn secondary" data-action="load-more">加载更早的内容</button></div>':'';
 function accountFrame(title,lede,body){return `<section class="account-panel"><h1>${title}</h1><p class="account-lede">${lede}</p>${body}</section>`;}
@@ -305,6 +305,39 @@ function invitationRow(invite){
   const until=new Date(invite.expiresAt).toLocaleDateString('zh-CN',{year:'numeric',month:'numeric',day:'numeric'});
   return `<div class="admin-row"><div><strong>${esc(shared?(invite.label||'多人邀请'):invite.email)}</strong><small>${shared?`已注册 ${used} 人`:'指定邮箱 · 单次使用'} · ${status} · ${esc(until)} 到期</small></div>${!invite.revokedAt&&!expired&&!consumed?`<div class="admin-actions"><button class="btn secondary small" data-action="${invite.url?'copy-history-invite':'reissue-invite'}" data-id="${esc(invite.id)}">${invite.url?'复制链接':'重新生成链接'}</button><button class="text-button" data-action="revoke-invite" data-id="${esc(invite.id)}">停用</button></div>`:''}</div>`;
 }
+function adminMemberRows(){return adminData.users.map(u=>`<div class="admin-row"><div><strong>${esc(u.name)}</strong><small>${esc(u.email)} · ${u.role==='admin'?'管理员':u.status==='active'?'成员':'已暂停'}</small></div><div class="admin-actions">${u.status==='active'?`<button class="btn secondary small" data-action="recovery-link" data-id="${esc(u.id)}">密码恢复链接</button>`:''}${u.role!=='admin'?`<button class="text-button" data-action="${u.status==='active'?'suspend-member':'restore-member'}" data-id="${esc(u.id)}">${u.status==='active'?'暂停参与':'恢复参与'}</button>`:''}</div></div>`).join('');}
+async function loadAdmin(){
+  const account=meId,request=++adminRequest;
+  const data=await api('/admin');
+  if(request!==adminRequest||account!==meId||store.state.me?.role!=='admin')return false;
+  adminData=data;return true;
+}
+function updateAdminMemberViews(){
+  if(readRoute().path!=='admin'||store.state.me?.role!=='admin'||!adminData)return;
+  const replace=(id,html)=>{
+    const el=document.getElementById(id);if(!el||el.innerHTML===html||el.querySelector('[data-action]:disabled'))return;
+    const focused=el.querySelector(':focus'),action=focused?.dataset.action,member=focused?.dataset.id;
+    el.innerHTML=html;
+    if(focused)Array.from(el.querySelectorAll('[data-action]')).find(node=>node.dataset.action===action&&node.dataset.id===member)?.focus({preventScroll:true});
+  };
+  const count=document.getElementById('admin-member-count');if(count)count.textContent=`${adminData.users.length} 位成员`;
+  replace('admin-member-list',adminMemberRows());
+  replace('admin-invite-list',adminData.invites.map(invitationRow).join('')||'<p class="small-note">还没有邀请记录。</p>');
+}
+async function refreshAdminMembers(){
+  if(syncing||readRoute().path!=='admin'||store.state.me?.role!=='admin')return;
+  syncing=true;const account=meId;
+  try{
+    if(!await loadAdmin()||account!==meId||readRoute().path!=='admin'||store.state.me?.role!=='admin')return;
+    updateAdminMemberViews();
+    const status=document.querySelector('#sync-status');if(status)status.hidden=true;
+    notify('成员名单已更新。');
+  }catch(error){
+    if(account!==meId||readRoute().path!=='admin'||store.state.me?.role!=='admin')return;
+    const status=document.querySelector('#sync-status');if(status){status.hidden=false;status.textContent='成员名单暂时未更新，请刷新重试。';}
+    notify(error.message);
+  }finally{syncing=false;}
+}
 function adminPage(){
   if(!store.state.me)return loginPage();
   if(store.state.me.role!=='admin')return empty('仅管理员可使用','你的成员账号仍然可以发表文章和回复。');
@@ -313,12 +346,12 @@ function adminPage(){
   <section class="admin-section"><h2>多人邀请链接</h2><p>收到链接的人可自行填写邮箱注册。</p>
   <form id="shared-invite-form" class="account-form"><label for="invite-label">备注 <span class="optional">选填，仅管理员可见</span></label><input id="invite-label" name="label" maxlength="60" placeholder="例如：读书小组"><label for="invite-days">有效天数</label><input id="invite-days" name="expiresInDays" type="number" min="1" max="365" step="1" value="7" required><p class="form-error" role="alert"></p><button class="btn" type="submit">生成多人邀请链接</button></form>${inviteResult('shared')}
   <details class="specific-invite" ${latestInvite?.kind==='member'?'open':''}><summary>指定邮箱邀请</summary><p class="small-note">只允许指定邮箱注册，7 天内有效，使用一次后失效。</p><form id="invite-form" class="account-form invite-form"><label for="invite-email">受邀者邮箱</label><div class="invite-input"><input id="invite-email" name="email" type="email" maxlength="254" required placeholder="colleague@example.com"><button class="btn secondary" type="submit">生成邀请链接</button></div><p class="form-error" role="alert"></p></form>${inviteResult('member')}</details></section>
-  <section class="admin-section"><h2>邀请记录</h2>${adminData.invites.length?adminData.invites.map(invitationRow).join(''):'<p class="small-note">还没有邀请记录。</p>'}</section>
-  <section class="admin-section"><h2>社区成员</h2>${latestRecovery?generatedLink(latestRecovery,'recovery','密码恢复链接','1 小时内有效。请核实身份后私下转交给本人。'):''}${adminData.users.map(u=>`<div class="admin-row"><div><strong>${esc(u.name)}</strong><small>${esc(u.email)} · ${u.role==='admin'?'管理员':u.status==='active'?'成员':'已暂停'}</small></div><div class="admin-actions">${u.status==='active'?`<button class="btn secondary small" data-action="recovery-link" data-id="${esc(u.id)}">密码恢复链接</button>`:''}${u.role!=='admin'?`<button class="text-button" data-action="${u.status==='active'?'suspend-member':'restore-member'}" data-id="${esc(u.id)}">${u.status==='active'?'暂停参与':'恢复参与'}</button>`:''}</div></div>`).join('')}</section>
+  <section class="admin-section"><h2>邀请记录</h2><div id="admin-invite-list">${adminData.invites.length?adminData.invites.map(invitationRow).join(''):'<p class="small-note">还没有邀请记录。</p>'}</div></section>
+  <section class="admin-section"><div class="section-label"><h2>社区成员 <span id="admin-member-count" class="small-note">${adminData.users.length} 位成员</span></h2><button class="btn secondary small" data-action="refresh-members">刷新名单</button></div>${latestRecovery?generatedLink(latestRecovery,'recovery','密码恢复链接','1 小时内有效。请核实身份后私下转交给本人。'):''}<div id="admin-member-list">${adminMemberRows()}</div></section>
   <section class="admin-section"><h2>已隐藏的内容</h2><p class="small-note">隐藏后不向成员展示，可以在这里恢复。</p>${[...adminData.hiddenPosts.map(p=>({...p,type:'post'})),...adminData.hiddenComments.map(c=>({...c,type:'comment'}))].map(p=>`<div class="admin-row"><div><strong>${esc(p.title||p.body.slice(0,80))}</strong><small>${p.type==='comment'?'回复':'文章／动态'}</small></div><button class="btn secondary small" data-action="restore-${p.type}" data-id="${esc(p.id)}">恢复展示</button></div>`).join('')||'<p class="small-note">没有隐藏的内容。</p>'}</section></section>`;
 }
-async function loadRoute(){route=readRoute();routeError='';if(route.path==='join'&&!store.state.me){const invite=route.params.get('invite')||'',request=++joinLoad;joinState={token:invite,data:null,error:'',retry:false};if(!invite)return;try{const info=await api('/session/invite',{invite});const current=readRoute();if(request===joinLoad&&current.path==='join'&&current.params.get('invite')===invite)joinState={token:invite,data:info,error:'',retry:false};}catch(error){const current=readRoute();if(request===joinLoad&&current.path==='join'&&current.params.get('invite')===invite)joinState={token:invite,data:null,error:error.message,retry:!error.status||error.status>=500};}return;}if(route.path==='forgot'){const request=++recoveryLoad;try{const status=await api('/session/recovery-status');if(request===recoveryLoad&&readRoute().path==='forgot'){recoveryStatus=status.enabled===true;recoveryStatusError='';}}catch(error){if(request===recoveryLoad&&readRoute().path==='forgot'){recoveryStatus=null;recoveryStatusError='暂时无法连接，请稍后重试，或联系管理员获取恢复链接。';}}return;}if(!store.state.me)return;try{if((route.path==='post'||route.path==='edit')&&route.id)await store.loadPost(route.id);if((route.path==='people'&&route.id)||route.path==='me')await store.loadProfile(profileId(),profileTab());if(route.path==='translations')await store.loadTranslations(Object.fromEntries(route.params));if(route.path==='bookmarks'&&store.state.me)await store.loadBookmarks();if(route.path==='admin'&&store.state.me?.role==='admin')adminData=await api('/admin');}catch(error){routeError=error.message;}}
-async function sync(manual=false){if(syncing)return;syncing=true;try{await store.refresh();await loadRoute();if(manual||!annotations?.isBusy())render(true);if(manual)notify('已同步最新内容。');}catch(error){const el=document.querySelector('#sync-status');if(el){el.hidden=false;el.textContent='连接中断，请刷新重试。';}if(manual)notify(error.message);}finally{syncing=false;}}
+async function loadRoute(){route=readRoute();routeError='';if(route.path==='join'&&!store.state.me){const invite=route.params.get('invite')||'',request=++joinLoad;joinState={token:invite,data:null,error:'',retry:false};if(!invite)return;try{const info=await api('/session/invite',{invite});const current=readRoute();if(request===joinLoad&&current.path==='join'&&current.params.get('invite')===invite)joinState={token:invite,data:info,error:'',retry:false};}catch(error){const current=readRoute();if(request===joinLoad&&current.path==='join'&&current.params.get('invite')===invite)joinState={token:invite,data:null,error:error.message,retry:!error.status||error.status>=500};}return;}if(route.path==='forgot'){const request=++recoveryLoad;try{const status=await api('/session/recovery-status');if(request===recoveryLoad&&readRoute().path==='forgot'){recoveryStatus=status.enabled===true;recoveryStatusError='';}}catch(error){if(request===recoveryLoad&&readRoute().path==='forgot'){recoveryStatus=null;recoveryStatusError='暂时无法连接，请稍后重试，或联系管理员获取恢复链接。';}}return;}if(!store.state.me)return;try{if((route.path==='post'||route.path==='edit')&&route.id)await store.loadPost(route.id);if((route.path==='people'&&route.id)||route.path==='me')await store.loadProfile(profileId(),profileTab());if(route.path==='translations')await store.loadTranslations(Object.fromEntries(route.params));if(route.path==='bookmarks'&&store.state.me)await store.loadBookmarks();if(route.path==='admin'&&store.state.me?.role==='admin')await loadAdmin();}catch(error){routeError=error.message;}}
+async function sync(manual=false){if(readRoute().path==='admin'){if(manual&&!routeError)return refreshAdminMembers();if(!manual)return;}if(syncing)return;syncing=true;try{await store.refresh();await loadRoute();if(manual||!annotations?.isBusy())render(true);if(manual)notify('已同步最新内容。');}catch(error){const el=document.querySelector('#sync-status');if(el){el.hidden=false;el.textContent='连接中断，请刷新重试。';}if(manual)notify(error.message);}finally{syncing=false;}}
 async function start(){app.innerHTML='<main class="page"><div class="empty-state"><h1>正在加载…</h1></div></main>';try{await store.refresh();await loadRoute();render();}catch(error){routeError=error.message;render();}}
 function formValues(form){const b=Object.fromEntries(new FormData(form));if('confirm' in b&&b.confirm!==b.password)throw new Error('两次输入的密码不一致。');return b;}
 
@@ -339,21 +372,23 @@ document.addEventListener('submit',async e=>{
     if(f.id==='invite-form'||f.id==='shared-invite-form'){
       const account=meId,kind=f.id==='shared-invite-form'?'shared':'member';
       const input=kind==='shared'?{kind,label:b.label,expiresInDays:Number(b.expiresInDays)}:{email:b.email};
+      adminRequest++;
       const data=await api('/admin/invites',input);if(account!==meId||store.state.me?.role!=='admin')return;
       latestInvite={...data,kind};if(readRoute().path==='admin'){render(true);scrollToId('generated-'+kind);notify('邀请链接已生成，请复制保存。');}
-      let fresh;try{fresh=await api('/admin');}catch{if(account===meId&&readRoute().path==='admin')notify('邀请链接已生成，请复制保存。邀请记录暂时未刷新。');return;}
-      if(account!==meId||store.state.me?.role!=='admin')return;adminData=fresh;if(readRoute().path==='admin')render(true);
+      let loaded;try{loaded=await loadAdmin();}catch{if(account===meId&&readRoute().path==='admin')notify('邀请链接已生成，请复制保存。邀请记录暂时未刷新。');return;}
+      if(!loaded||account!==meId||store.state.me?.role!=='admin')return;if(readRoute().path==='admin')render(true);
     }
   }catch(error){if(f.isConnected)formError(f,error);}finally{delete f.dataset.busy;submit.disabled=false;if(f.id==='forgot-form')updateForgotCountdown();}
 });
 document.addEventListener('click',async e=>{
   const el=e.target.closest('[data-action]');if(!el)return;const {action,id}=el.dataset;
-  const known=['retry-join','retry-recovery-status','refresh','load-more','load-translations','load-profile','logout','copy-invite','copy-history-invite','reissue-invite','confirm-reissue-invite','hide-post','hide-comment','confirm-hide','revoke-invite','recovery-link','suspend-member','restore-member','restore-post','restore-comment'];if(!known.includes(action))return;if(el.disabled)return;
+  const known=['retry-join','retry-recovery-status','refresh','refresh-members','load-more','load-translations','load-profile','logout','copy-invite','copy-history-invite','reissue-invite','confirm-reissue-invite','hide-post','hide-comment','confirm-hide','revoke-invite','recovery-link','suspend-member','restore-member','restore-post','restore-comment'];if(!known.includes(action))return;if(el.disabled)return;
   el.disabled=true;
   try{
     if(action==='retry-join'){await loadRoute();if(readRoute().path==='join')render(true);}
     if(action==='retry-recovery-status'){await loadRoute();if(readRoute().path==='forgot')render(true);}
     if(action==='refresh')await sync(true);
+    if(action==='refresh-members')await refreshAdminMembers();
     if(action==='load-more'){await store.more();render(true);}
     if(action==='load-translations'){await store.loadTranslations(Object.fromEntries(route.params),true);render(true);}
     if(action==='load-profile'){await store.loadProfile(profileId(),profileTab(),true);render(true);}
@@ -361,20 +396,29 @@ document.addEventListener('click',async e=>{
     if(action==='copy-invite'){const kind=el.dataset.linkKind,url=kind==='recovery'?latestRecovery:latestInvite?.kind===kind?latestInvite.url:'';if(!url)return;try{await navigator.clipboard.writeText(url);notify('链接已复制。');}catch{document.querySelector('#generated-link-'+kind)?.select();notify('请选中链接后复制。');}}
     if(action==='copy-history-invite'){const invite=adminData?.invites.find(item=>item.id===id);if(!invite?.url)return;try{await navigator.clipboard.writeText(invite.url);notify('链接已复制。');}catch{modal('邀请链接',`<div class="invite-result"><input id="history-invite-link" aria-label="邀请链接" readonly value="${esc(invite.url)}"><p class="small-note">请选中链接后复制。</p></div>`,`<button class="btn secondary" data-action="close-dialog">关闭</button>`);document.querySelector('#history-invite-link')?.select();}}
     if(action==='reissue-invite'){modal('重新生成邀请链接？','<p>旧链接会立即失效，已加入的成员不受影响。注册人数和原到期时间保留。</p>',`<button class="btn secondary" data-action="close-dialog">取消</button><button class="btn" data-action="confirm-reissue-invite" data-id="${esc(id)}">重新生成</button>`);}
-    if(action==='confirm-reissue-invite'){const account=meId,data=await api('/admin/reissue-invite',{id});if(account!==meId||store.state.me?.role!=='admin')return;dialog.close();latestInvite=data;adminData.invites=adminData.invites.map(invite=>invite.id===id?{...invite,url:data.url}:invite);if(readRoute().path==='admin'){render(true);scrollToId('generated-'+data.kind);notify('新链接已生成，旧链接已失效。');}const fresh=await api('/admin');if(account!==meId||store.state.me?.role!=='admin')return;adminData=fresh;if(readRoute().path==='admin')render(true);}
+    if(action==='confirm-reissue-invite'){const account=meId;adminRequest++;const data=await api('/admin/reissue-invite',{id});if(account!==meId||store.state.me?.role!=='admin')return;dialog.close();latestInvite=data;adminData.invites=adminData.invites.map(invite=>invite.id===id?{...invite,url:data.url}:invite);if(readRoute().path==='admin'){render(true);scrollToId('generated-'+data.kind);notify('新链接已生成，旧链接已失效。');}if(!await loadAdmin()||account!==meId||store.state.me?.role!=='admin')return;if(readRoute().path==='admin')render(true);}
     if(action==='hide-post'||action==='hide-comment'){modal('隐藏这条内容？','<p>隐藏后，其他成员将无法看到。管理员可以恢复内容。</p>',`<button class="btn secondary" data-action="close-dialog">保留</button><button class="btn danger" data-action="confirm-hide" data-id="${esc(id)}" data-type="${action==='hide-post'?'post':'comment'}">隐藏内容</button>`);}
     if(action==='confirm-hide'){await store.moderate(el.dataset.type,id);dialog.close();if(el.dataset.type==='post')location.hash='#/articles';await loadRoute();render(true);notify('内容已隐藏。');}
-    if(action==='revoke-invite'){const account=meId;await api('/admin/revoke',{id});if(account!==meId||store.state.me?.role!=='admin')return;if(latestInvite?.id===id)latestInvite=null;const fresh=await api('/admin');if(account!==meId||store.state.me?.role!=='admin')return;adminData=fresh;if(readRoute().path==='admin'){render(true);notify('邀请链接已停用，已加入的成员不受影响。');}}
+    if(action==='revoke-invite'){const account=meId;adminRequest++;await api('/admin/revoke',{id});if(account!==meId||store.state.me?.role!=='admin')return;if(latestInvite?.id===id)latestInvite=null;if(!await loadAdmin()||account!==meId||store.state.me?.role!=='admin')return;if(readRoute().path==='admin'){render(true);notify('邀请链接已停用，已加入的成员不受影响。');}}
     if(action==='recovery-link'){const account=meId;const data=await api('/admin/recovery',{id});if(account!==meId||store.state.me?.role!=='admin')return;latestRecovery=data.url;if(readRoute().path==='admin'){render(true);scrollToId('generated-recovery');notify('恢复链接已生成，1 小时内有效。请核实身份后私下转交。');}}
-    if(action==='suspend-member'||action==='restore-member'){await api('/admin/member',{id,active:action==='restore-member'});adminData=await api('/admin');render(true);notify(action==='restore-member'?'已恢复成员权限。':'已暂停成员权限并退出其登录会话。');}
-    if(action==='restore-post'||action==='restore-comment'){await store.moderate(action==='restore-post'?'post':'comment',id,true);adminData=await api('/admin');render(true);notify('内容已恢复展示。');}
+    if(action==='suspend-member'||action==='restore-member'){
+      const account=meId;adminRequest++;await api('/admin/member',{id,active:action==='restore-member'});
+      if(account!==meId||store.state.me?.role!=='admin'||!await loadAdmin())return;
+      if(readRoute().path==='admin'){
+        el.disabled=false;if(document.activeElement===el)el.blur();updateAdminMemberViews();
+        const nextAction=action==='restore-member'?'suspend-member':'restore-member';
+        Array.from(document.querySelectorAll(`[data-action="${nextAction}"]`)).find(button=>button.dataset.id===id)?.focus({preventScroll:true});
+        notify(action==='restore-member'?'已恢复成员权限。':'已暂停成员权限并退出其登录会话。');
+      }
+    }
+    if(action==='restore-post'||action==='restore-comment'){const account=meId;adminRequest++;await store.moderate(action==='restore-post'?'post':'comment',id,true);if(account!==meId||store.state.me?.role!=='admin'||!await loadAdmin())return;if(readRoute().path==='admin'){render(true);notify('内容已恢复展示。');}}
   }catch(error){notify(error.message);}finally{el.disabled=false;}
 });
 setInterval(()=>{if(document.visibilityState==='visible'&&!annotations?.isBusy()&&!store.loadedMore&&!dialog.open&&!document.querySelector('.account-menu[open]')&&readRoute().path!=='admin'&&!editorRoute(readRoute().path)&&!authRoute(readRoute().path)&&!document.querySelector('input:focus,textarea:focus,select:focus')&&!document.querySelector('#comment-body')?.value)sync();},30000);
 window.addEventListener('focus',()=>{if(!annotations?.isBusy()&&readRoute().path!=='admin'&&!editorRoute(readRoute().path)&&!authRoute(readRoute().path)&&!document.querySelector('input:focus,textarea:focus')&&!document.querySelector('#comment-body')?.value)sync();});
 
 window.addEventListener('community-session-ending',saveDraft);
-function clearPrivateUI(){clearTimeout(saveTimer);composer=null;composerTarget=null;commentEdit=null;adminData=null;latestInvite=null;latestRecovery='';joinLoad++;joinState={token:'',data:null,error:'',retry:false};replyTo=null;pendingMemberAction=null;routeError='';dialog.close();dialog.innerHTML='';render();}
+function clearPrivateUI(){adminRequest++;clearTimeout(saveTimer);composer=null;composerTarget=null;commentEdit=null;adminData=null;latestInvite=null;latestRecovery='';joinLoad++;joinState={token:'',data:null,error:'',retry:false};replyTo=null;pendingMemberAction=null;routeError='';dialog.close();dialog.innerHTML='';render();}
 window.addEventListener('community-session-cleared',clearPrivateUI);
 window.addEventListener('community-session-expired',()=>{clearPrivateUI();notify('登录已失效，请重新登录。写作草稿仍保存在本机。');});
 window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});

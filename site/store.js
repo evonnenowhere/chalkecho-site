@@ -5,6 +5,7 @@ const transport=createAPITransport(runtimeConfig);
 export let meId='visitor';
 let state={role:'visitor',me:null,following:[],bookmarks:[],draft:null};
 let posts=[],people=[],replies=[],topics=[],counts={},storageAvailable=true,hasMore=false,page=0,sessionVersion=0;
+let refreshVersion=0,memberVersion=0;
 let translations={posts:[],hasMore:false,total:0,page:0},translationVersion=0;
 let profile=null,profileVersion=0;
 const postRequests=new Map();
@@ -38,6 +39,7 @@ export async function api(path,body,method='POST'){
 }
 function restoreDraft(){try{state.draft=JSON.parse(localStorage.getItem(draftKey())||'null');}catch{state.draft=null;storageAvailable=false;}}
 function requireMember(){if(!state.me)throw new Error('请先登录受邀成员账号。');}
+function updateMembers(data,request){if(request===memberVersion){people=data.members;state.following=data.following;}}
 export const store={
   get state(){return state;},get persistent(){return storageAvailable;},get hasMore(){return hasMore;},get loadedMore(){return page>0||translations.page>0||(profile?.page||0)>0;},
   get translations(){return translations;},
@@ -49,14 +51,20 @@ export const store={
   post(id){return posts.find(p=>p.id===id);},commentsFor(id){return this.comments.filter(c=>c.publicationId===id);},
   commentCount(id){return counts[id]||0;},
   async refresh(){
-    const version=sessionVersion;
+    const version=sessionVersion,request=++refreshVersion,membersRequest=++memberVersion;
     let data;try{data=await api('/community');}catch(error){if(error.code==='MEMBER_REQUIRED')return {me:null};throw error;}
-    if(version!==sessionVersion)return {me:state.me};
+    if(version!==sessionVersion||request!==refreshVersion||membersRequest!==memberVersion)return {me:state.me};
     const previous=meId;if(state.me&&data.me.id!==previous)clearSession();state.me=data.me;state.role='member';meId=data.me.id;
-    state.following=data.following;state.bookmarks=data.bookmarks;people=data.members;posts=data.posts.map(freshestPost);topics=data.topics||[];counts=data.counts;hasMore=data.hasMore;page=0;
+    updateMembers(data,membersRequest);state.bookmarks=data.bookmarks;posts=data.posts.map(freshestPost);topics=data.topics||[];counts=data.counts;hasMore=data.hasMore;page=0;
     if(meId!==previous){replies=[];restoreDraft();}return data;
   },
-  async more(){requireMember();const version=sessionVersion;const data=await api('/community?page='+(page+1));if(version!==sessionVersion||!state.me)return;posts=[...new Map([...posts,...data.posts.map(freshestPost)].map(p=>[p.id,p])).values()];page++;hasMore=data.hasMore;},
+  async more(){
+    requireMember();const version=sessionVersion,refresh=refreshVersion,membersRequest=++memberVersion,nextPage=page+1;
+    const data=await api('/community?page='+nextPage);
+    if(version!==sessionVersion||refresh!==refreshVersion||!state.me)return;
+    if(data.me.id!==meId){if(membersRequest!==memberVersion)return;clearSession();return this.refresh();}
+    updateMembers(data,membersRequest);posts=[...new Map([...posts,...data.posts.map(freshestPost)].map(p=>[p.id,p])).values()];page=nextPage;hasMore=data.hasMore;
+  },
   async loadTranslations(params={},append=false){
     requireMember();const version=sessionVersion,request=++translationVersion,nextPage=append?translations.page+1:0;
     const query=new URLSearchParams({q:params.q||'',category:params.category||'',page:String(nextPage)});
