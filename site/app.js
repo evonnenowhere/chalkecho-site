@@ -47,13 +47,10 @@ function actions(p){const marked=store.state.bookmarks.includes(p.id);return `<d
 function articleRow(p,index){return `<article class="article-row"><div class="row-content"><div class="eyebrow"><span>${esc(p.category)}</span><span class="source-chip ${p.sourceMode==='external'?'external':''}">${sourceLabel(p)}</span></div><h3><a href="${href('post',p.id)}">${esc(p.title)}</a></h3><p class="article-summary">${esc(p.summary)}</p>${p.kind==='translation'?`<p class="translation-credit">原作：${esc(p.originalAuthor)}<span>·</span>译者：${esc(p.translator)}</p>`:''}${postMeta(p)}${actions(p)}</div><a href="${href('post',p.id)}" class="row-number" aria-label="阅读：${esc(p.title)}">${String((index??0)+1).padStart(2,'0')}${icon(p.kind==='link'?'external':'arrow')}</a></article>`;}
 function featured(p){return `<article class="featured"><div class="featured-content"><div class="eyebrow"><span class="featured-kicker">编辑精选</span><span>${esc(p.category)}</span></div><h2><a href="${href('post',p.id)}">${esc(p.title)}</a></h2><p>${esc(p.summary)}</p><div class="featured-bottom">${postMeta(p)}<a class="read-link" href="${href('post',p.id)}">开始阅读 ${icon('arrow')}</a></div></div></article>`;}
 function sidebar(){
-  const people=store.members.filter(m=>m.id!==meId).slice(0,3);
-  if(!store.topics.length&&!people.length)return '';
+  if(!store.topics.length)return '';
   return `<aside class="sidebar">
-  ${store.topics.length?`<section class="side-section"><div class="section-label"><h2>专题</h2><a href="#/topics" aria-label="查看全部专题">${icon('arrow')}</a></div>
-  ${store.topics.slice(0,3).map(t=>`<a class="topic-mini" href="${href('topics',t.id)}"><span class="topic-number ${t.color}">${t.number}</span><span><strong>${esc(t.title)}</strong><small>${t.ids.length} 篇内容 · 编辑整理</small></span>${icon('arrow')}</a>`).join('')}</section>`:''}
-  ${people.length?`<section class="side-section"><div class="section-label"><h2>成员</h2></div>
-  ${people.map(m=>`<div class="person-mini"><a href="${href('people',m.id)}">${avatar(m.id)}<span><strong>${esc(m.name)}</strong><small>${esc(m.field)}</small></span></a>${followButton(m.id)}</div>`).join('')}</section>`:''}
+  <section class="side-section"><div class="section-label"><h2>专题</h2><a href="#/topics" aria-label="查看全部专题">${icon('arrow')}</a></div>
+  ${store.topics.slice(0,3).map(t=>`<a class="topic-mini" href="${href('topics',t.id)}"><span class="topic-number ${t.color}">${t.number}</span><span><strong>${esc(t.title)}</strong><small>${t.ids.length} 篇内容 · 编辑整理</small></span>${icon('arrow')}</a>`).join('')}</section>
   </aside>`;
 }
 

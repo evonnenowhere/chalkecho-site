@@ -50,9 +50,16 @@ async function harness(hash='#/admin',{role='admin'}={}){
   };
 }
 
-test('neither the main navigation nor the sidebar exposes a full member directory',async()=>{
+test('the homepage shows topics when available and never lists sidebar members',async()=>{
   for(const role of ['member','admin']){
     const view=await harness('#/articles',{role});
+    assert.equal(view.document.querySelector('.sidebar'),null);
+    view.store.topics.push({id:'geometry',title:'几何选读',color:'blue',number:1,ids:[]});
+    view.run('render()');
+    const sidebar=view.document.querySelector('.sidebar');
+    assert.equal(sidebar.querySelector('.topic-mini').getAttribute('href'),'#/topics/geometry');
+    assert.deepEqual(sidebar.querySelectorAll('h2').map(heading=>heading.textContent),['专题']);
+    for(const member of members)assert.ok(!sidebar.textContent.includes(member.name));
     assert.equal(view.document.querySelector('.main-nav a[href="#/people"]'),null);
     assert.equal(view.document.querySelector('.sidebar a[href="#/people"]'),null);
     assert.equal(view.document.querySelector('#member-list'),null);

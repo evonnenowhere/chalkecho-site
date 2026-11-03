@@ -82,6 +82,7 @@ body {
 .search-form input::placeholder { color: #707467; opacity: 1; }
 .search-form button { min-height: 32px; min-width: 32px; justify-content: center; }
 .content-grid { gap: 32px; }
+.content-grid > :only-child { grid-column: 1 / -1; }
 
 /* Quiet, squared paper surfaces; texture stays behind text and formulas. */
 .articles-section, .feed-section, .member-publications,
