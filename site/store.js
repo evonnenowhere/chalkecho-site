@@ -1,6 +1,5 @@
 import runtimeConfig from './runtime-config.js';
 import {createAPITransport} from './transport.js';
-import {contentLicense} from './license-policy.js';
 const transport=createAPITransport(runtimeConfig);
 export let meId='visitor';
 let state={role:'visitor',me:null,following:[],bookmarks:[],draft:null};
@@ -96,6 +95,6 @@ export const store={
   async publish(input){requireMember();const version=sessionVersion,savedDraft=JSON.stringify(state.draft);const {post}=await api('/posts',input);if(version!==sessionVersion||!state.me)return null;posts.unshift(post);if(JSON.stringify(state.draft)===savedDraft)this.saveDraft(null);return post;},
   async updatePost(id,input,expectedRevision){requireMember();const version=sessionVersion,savedDraft=JSON.stringify(this.editDraft(id));const {post}=await api('/posts/'+encodeURIComponent(id),{...input,expectedRevision},'PATCH');if(version!==sessionVersion||!state.me)return null;postRequests.set(id,(postRequests.get(id)||0)+1);const updated=freshestPost(post);posts=[...posts.filter(p=>p.id!==id),updated];translations.posts=translations.posts.map(p=>p.id===id?updated:p);if(profile)profile.posts=profile.posts.map(p=>p.id===id?updated:p);if(JSON.stringify(this.editDraft(id))===savedDraft)this.saveEditDraft(id,null);return updated;},
   async updateComment(id,body,expectedRevision){requireMember();const version=sessionVersion;const {comment}=await api('/comments/'+encodeURIComponent(id),{body,expectedRevision},'PATCH');if(version!==sessionVersion||!state.me)return null;postRequests.set(comment.publicationId,(postRequests.get(comment.publicationId)||0)+1);replies=replies.map(c=>c.id===id&&(c.revision||1)<=(comment.revision||1)?comment:c);return comment;},
-  async comment(publicationId,body,replyTo,anchor,licenseConfirmed=false){requireMember();const version=sessionVersion;const {comment}=await api('/comments',{publicationId,body,replyTo,license:contentLicense,licenseConfirmed,...(anchor?{anchor}:{})});if(version!==sessionVersion||!state.me)return;postRequests.set(publicationId,(postRequests.get(publicationId)||0)+1);replies.push(comment);if(!comment.anchor)counts[publicationId]=(counts[publicationId]||0)+1;return comment;},
+  async comment(publicationId,body,replyTo,anchor){requireMember();const version=sessionVersion;const {comment}=await api('/comments',{publicationId,body,replyTo,...(anchor?{anchor}:{})});if(version!==sessionVersion||!state.me)return;postRequests.set(publicationId,(postRequests.get(publicationId)||0)+1);replies.push(comment);if(!comment.anchor)counts[publicationId]=(counts[publicationId]||0)+1;return comment;},
   async moderate(type,id,active=false){await api('/moderate',{type,id,active});if(!active){if(type==='comment')replies=replies.filter(c=>c.id!==id);else {posts=posts.filter(p=>p.id!==id);translations.posts=translations.posts.filter(p=>p.id!==id);}}}
 };
